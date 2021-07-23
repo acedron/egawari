@@ -20,7 +20,8 @@ use std::process;
 use anyhow::Result;
 
 #[macro_use]
-mod color;
+pub mod color;
+pub mod config;
 
 fn main() -> Result<()> {
     let mut args: Vec<String> = vec![];
