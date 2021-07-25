@@ -82,7 +82,7 @@ pub fn init_curses_wcolors() -> pancurses::Window {
 /// ## Example
 /// 
 /// ```rust
-/// use pancurses;
+/// extern crate pancurses;
 /// 
 /// let window = pancurses::initscr();
 /// stdout::escaped_to_printw(&window, "\x1b[1;32mHi!")

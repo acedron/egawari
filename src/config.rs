@@ -23,23 +23,65 @@ use toml;
 
 use crate::stdout::init_curses_wcolors;
 
+/// The configuration struct.
+///
+/// ## Example
+/// 
+/// ```rust
+/// config::Config {
+///     input: config::Input {
+///         name: String::from("SynPS/2 Synaptics TouchPad")
+///     },
+///     display: Some(config::Display {
+///         display: Some(String::from(":0")),
+///         screen: 0
+///     })
+/// }
+/// ```
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub input: Input,
     pub display: Option<Display>
 }
 
+/// The input configuration struct.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// config::Input {
+///     name: String::from("SynPS/2 Synaptics TouchPad")
+/// }
+/// ```
 #[derive(Serialize, Deserialize)]
 pub struct Input {
     pub name: String
 }
 
+/// The display configuration struct.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// config::Display {
+///     display: Some(String::from(":0")),
+///     screen: 0
+/// }
+/// ```
 #[derive(Serialize, Deserialize)]
 pub struct Display {
     pub display: Option<String>,
     pub screen: u8
 }
 
+/// Returns the configuration in the config file as struct.
+/// Config file is located at `$CONFIG_DIR/egawari/egawari.toml`
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// let conf: config::Config = config::get_config().unwrap();
+/// ```
 pub fn get_config() -> Result<Config> {
     let file = config_dir().unwrap().join("egawari").join("egawari.toml");
 
@@ -72,6 +114,21 @@ pub fn get_config() -> Result<Config> {
     }
 }
 
+/// Saves the given config struct to the config file.
+/// Config file is located at `$CONFIG_DIR/egawari/egawari.toml`
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// let conf = config::Config {
+///     input: config::Input {
+///         name: String::new()
+///     },
+///     display: None
+/// };
+/// 
+/// config::save_config(conf).unwrap();
+/// ```
 pub fn save_config(config: Config) -> Result<()> {
     let dir = config_dir().unwrap().join("egawari");
     let file = dir.join("egawari.toml");
@@ -83,6 +140,14 @@ pub fn save_config(config: Config) -> Result<()> {
     Ok(())
 }
 
+/// Edit the config keys and values interactively using curses.
+/// Automatically loads and saves the config.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// config::config_interactive();
+/// ```
 pub fn config_interactive() {
     let window = init_curses_wcolors();
     window.keypad(true);

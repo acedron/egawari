@@ -30,6 +30,9 @@ use anyhow::Result;
 pub mod stdout;
 pub mod config;
 
+#[cfg(test)]
+mod tests;
+
 fn main() -> Result<()> {
     let mut args: Vec<String> = vec![];
     let mut opts: Vec<String> = vec![];
