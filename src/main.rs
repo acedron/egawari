@@ -77,7 +77,7 @@ fn main() -> Result<()> {
             colln!("---=============---");
         },
         "config" => {
-            config::config_interactive();
+            config::config_interactive()?;
         },
         _ => {
             errln!("Unknown command: \x1b[0;37m{}", command);

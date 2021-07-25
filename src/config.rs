@@ -19,6 +19,7 @@ use std::{fs, env};
 use dirs::config_dir;
 use anyhow::{Context, Result};
 use serde::{Serialize, Deserialize};
+use pancurses;
 use toml;
 
 use crate::stdout::init_curses_wcolors;
@@ -148,11 +149,39 @@ pub fn save_config(config: Config) -> Result<()> {
 /// ```rust
 /// config::config_interactive();
 /// ```
-pub fn config_interactive() {
+pub fn config_interactive() -> Result<()> {
     let window = init_curses_wcolors();
     window.keypad(true);
+    pancurses::noecho();
 
-    window.refresh();
-    window.getch();
+    colwln!(&window, "---===egawari=Configuration===---");
+    window.printw("\n");
+    colwln!(&window, "---===========================---");
+    window.printw("\n");
+    logwln!(&window, "Use \"Up\" and \"Down\" to move, \"Space\" to edit and \"Enter\" to exit.");
+
+    loop {
+        match window.getch() {
+            Some(pancurses::Input::KeyEnter) | Some(pancurses::Input::Character('\n')) => {
+                // TODO: Save the config.
+                break;
+            },
+            Some(pancurses::Input::Character(' ')) => {
+                // TODO: Enter the edit mode.
+            },
+            Some(pancurses::Input::KeyUp) => {
+                // TODO: Select the previous key.
+            },
+            Some(pancurses::Input::KeyDown) => {
+                // TODO: Select the next key.
+            },
+            Some(_) => (),
+            None => ()
+        }
+
+        window.refresh();
+    }
+    
     pancurses::endwin();
+    Ok(())
 }

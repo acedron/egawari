@@ -60,7 +60,6 @@ pub fn init_curses_wcolors() -> pancurses::Window {
 
     pancurses::use_default_colors();
     pancurses::start_color();
-    pancurses::noecho();
     pancurses::init_pair(0, pancurses::COLOR_BLACK, -1);
     pancurses::init_pair(1, pancurses::COLOR_RED, -1);
     pancurses::init_pair(2, pancurses::COLOR_GREEN, -1);
@@ -91,7 +90,7 @@ pub fn escaped_to_printw(window: &pancurses::Window, escaped: String) {
     window.attron(pancurses::ColorPair(7));
     window.attron(pancurses::A_BOLD);
 
-    let re = Regex::new(r"(?<=\[).*;.+(?=m)").unwrap();
+    let re = Regex::new(r"(?<=\[)[0-9]*;[0-9]+(?=m)").unwrap();
     for s in escaped.split("\x1b") {
         let mat = re.find(s).unwrap();
         let mut chars = s.chars();
