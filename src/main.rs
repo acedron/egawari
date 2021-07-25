@@ -15,12 +15,19 @@
 ** You should have received a copy of the GNU General Public License
 ** along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ****************************************************************************/
+extern crate serde;
+extern crate fancy_regex;
+extern crate pancurses;
+extern crate anyhow;
+extern crate dirs;
+extern crate toml;
+
 use std::env;
 use std::process;
 use anyhow::Result;
 
 #[macro_use]
-pub mod color;
+pub mod stdout;
 pub mod config;
 
 fn main() -> Result<()> {
@@ -65,6 +72,9 @@ fn main() -> Result<()> {
             logln!("help => Shows this text.");
             println!();
             colln!("---=============---");
+        },
+        "config" => {
+            config::config_interactive();
         },
         _ => {
             errln!("Unknown command: \x1b[0;37m{}", command);

@@ -16,6 +16,7 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0.126", features = ["derive"] }
 fancy-regex = "0.7.0"
+pancurses = "0.16.1"
 anyhow = "1.0.42"
 dirs = "3.0.2"
 toml = "0.5.8"

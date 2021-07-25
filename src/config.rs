@@ -21,6 +21,8 @@ use anyhow::{Context, Result};
 use serde::{Serialize, Deserialize};
 use toml;
 
+use crate::stdout::init_curses_wcolors;
+
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub input: Input,
@@ -79,4 +81,13 @@ pub fn save_config(config: Config) -> Result<()> {
     fs::write(file.as_path(), raw).context("Couldn't write to the config file.")?;
 
     Ok(())
+}
+
+pub fn config_interactive() {
+    let window = init_curses_wcolors();
+    window.keypad(true);
+
+    window.refresh();
+    window.getch();
+    pancurses::endwin();
 }
