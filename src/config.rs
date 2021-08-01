@@ -135,7 +135,7 @@ pub fn save_config(config: Config) -> Result<()> {
     let file = dir.join("egawari.toml");
     let raw = toml::to_string_pretty(&config).context("Couldn't convert the config to TOML.")?;
     
-    fs::create_dir_all(dir.as_path()).context("Couldn't create the config directory")?;
+    fs::create_dir_all(dir.as_path()).context("Couldn't create the config directory.")?;
     fs::write(file.as_path(), raw).context("Couldn't write to the config file.")?;
 
     Ok(())
@@ -154,20 +154,35 @@ pub fn config_interactive() -> Result<()> {
     window.keypad(true);
     pancurses::noecho();
 
-    colwln!(&window, "---===egawari=Configuration===---");
-    window.printw("\n");
-    colwln!(&window, "---===========================---");
-    window.printw("\n");
-    logwln!(&window, "Use \"Up\" and \"Down\" to move, \"Space\" to edit and \"Enter\" to exit.");
-
+    let mut edit = false;
+    let conf = get_config()?;
     loop {
+        window.mv(0, 0);
+        colwln!(&window, "---===egawari=Configuration===---");
+        window.printw("\n");
+
+        // Input section
+        colwln!(&window, r"=\[Input\]=");
+        logwln!(&window, "Name = {:?}", conf.input.name);
+        window.printw("\n");
+
+        // Display section
+        if let Some(_disp) = &conf.display {
+            colwln!(&window, r"=\[Display\]=");
+            window.printw("\n");
+        }
+
+        colwln!(&window, "---===========================---");
+        window.printw("\n");
+        logwln!(&window, r#"Use "Up" and "Down" to move, "Space" to edit and "Enter" to exit."#);
+
         match window.getch() {
             Some(pancurses::Input::KeyEnter) | Some(pancurses::Input::Character('\n')) => {
-                // TODO: Save the config.
-                break;
+                if !edit { break; }
+                else { edit = false; }
             },
             Some(pancurses::Input::Character(' ')) => {
-                // TODO: Enter the edit mode.
+                /* if !edit { edit = true; } */
             },
             Some(pancurses::Input::KeyUp) => {
                 // TODO: Select the previous key.
@@ -183,5 +198,7 @@ pub fn config_interactive() -> Result<()> {
     }
     
     pancurses::endwin();
+    save_config(conf)?;
+    successln!("Successfully saved the configuration.");
     Ok(())
 }

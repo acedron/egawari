@@ -56,7 +56,7 @@ fn main() -> Result<()> {
 
     if args.len() < 1 {
         errln!("No command provided.");
-        logln!("See: \x1b[;megawari help");
+        logln!("See: \x1b[0;39megawari help");
         process::exit(1);
     }
 
@@ -73,6 +73,7 @@ fn main() -> Result<()> {
             println!();
             colln!("---===Commands==---");
             logln!("help => Shows this text.");
+            logln!("config => Edits or shows the egawari configuration interactively.");
             println!();
             colln!("---=============---");
         },
@@ -80,8 +81,8 @@ fn main() -> Result<()> {
             config::config_interactive()?;
         },
         _ => {
-            errln!("Unknown command: \x1b[0;37m{}", command);
-            logln!("See: \x1b[0;37megawari help");
+            errln!("Unknown command: \x1b[0;39m{}", command);
+            logln!("See: \x1b[0;39megawari help");
             process::exit(1);
         }
     }
