@@ -35,6 +35,7 @@ pub fn color_str_escape(string: &str) -> String {
         (r#"[:/=]+"#, "\x1b[1;32m${0}\x1b[1;39m"),
         (r#"[,\-|]+"#, "\x1b[0;32m${0}\x1b[1;39m"),
         (r#"[*]+"#, "\x1b[1;31m${0}\x1b[1;39m"),
+        (r#"[{}]+"#, "\x1b[1;35m${0}\x1b[1;39m"),
 
         // Exceptions
         ("\x1b\\[\\d*;\\d+m=\x1b\\[\\d*;\\d+m>", "\x1b[1;36m=>\x1b[1;39m")
@@ -160,62 +161,112 @@ pub fn escaped_to_printw(window: &pancurses::Window, escaped: String) {
 
 #[macro_export]
 macro_rules! col {
-    ($fmt:expr) => ({ print!("\x1b[1;39m{}\x1b[;m", $crate::stdout::color_str_escape($fmt)); });
-    ($fmt:expr, $($arg:tt)*) => ({ print!("\x1b[1;39m{}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())); });
+    ($fmt:expr) => ({
+        print!("\x1b[1;39m{}\x1b[;m", $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        print!("\x1b[1;39m{}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
 }
 
 #[macro_export]
 macro_rules! colln {
-    ($fmt:expr) => ({ col!(format!("{}\n", $fmt).as_str()); });
-    ($fmt:expr, $($arg:tt)*) => ({ col!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($fmt:expr) => ({
+        col!(format!("{}\n", $fmt).as_str());
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        col!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! log {
-    ($fmt:expr) => ({ print!(" \x1b[1;36m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt)); });
-    ($fmt:expr, $($arg:tt)*) => ({ print!("\x1b[1;36m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())); });
+    ($fmt:expr) => ({
+        print!(" \x1b[1;36m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        print!("\x1b[1;36m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
 }
 
 #[macro_export]
 macro_rules! logln {
-    ($fmt:expr) => ({ log!(format!("{}\n", $fmt).as_str()); });
-    ($fmt:expr, $($arg:tt)*) => ({ log!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($fmt:expr) => ({
+        log!(format!("{}\n", $fmt).as_str());
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        log!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! err {
-    ($fmt:expr) => ({ print!(" \x1b[1;31m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt)); });
-    ($fmt:expr, $($arg:tt)*) => ({ print!("\x1b[1;31m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())); });
+    ($fmt:expr) => ({
+        print!(" \x1b[1;31m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        print!("\x1b[1;31m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
 }
 
 #[macro_export]
 macro_rules! errln {
-    ($fmt:expr) => ({ err!(format!("{}\n", $fmt).as_str()); });
-    ($fmt:expr, $($arg:tt)*) => ({ err!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($fmt:expr) => ({
+        err!(format!("{}\n", $fmt).as_str());
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        err!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! success {
-    ($fmt:expr) => ({ print!(" \x1b[1;32m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt)); });
-    ($fmt:expr, $($arg:tt)*) => ({ print!("\x1b[1;32m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())); });
+    ($fmt:expr) => ({
+        print!(" \x1b[1;32m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        print!("\x1b[1;32m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
 }
 
 #[macro_export]
 macro_rules! successln {
-    ($fmt:expr) => ({ success!(format!("{}\n", $fmt).as_str()); });
-    ($fmt:expr, $($arg:tt)*) => ({ success!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($fmt:expr) => ({
+        success!(format!("{}\n", $fmt).as_str());
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        success!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! warn {
-    ($fmt:expr) => ({ print!(" \x1b[1;33m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt)); });
-    ($fmt:expr, $($arg:tt)*) => ({ print!("\x1b[1;33m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())); });
+    ($fmt:expr) => ({
+        print!(" \x1b[1;33m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        print!("\x1b[1;33m=>\x1b[1;39m {}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
 }
 
 #[macro_export]
 macro_rules! warnln {
-    ($fmt:expr) => ({ warn!(format!("{}\n", $fmt).as_str()); });
-    ($fmt:expr, $($arg:tt)*) => ({ warn!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($fmt:expr) => ({
+        warn!(format!("{}\n", $fmt).as_str());
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        warn!(format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 //
@@ -226,60 +277,110 @@ macro_rules! warnln {
 
 #[macro_export]
 macro_rules! colw {
-    ($window:expr, $fmt:expr) => ({ $crate::stdout::escaped_to_printw($window, $crate::stdout::color_str_escape($fmt)); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ $crate::stdout::escaped_to_printw($window, $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())); });
+    ($window:expr, $fmt:expr) => ({
+        $crate::stdout::escaped_to_printw($window, $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        $crate::stdout::escaped_to_printw($window, $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
 }
 
 #[macro_export]
 macro_rules! colwln {
-    ($window:expr, $fmt:expr) => ({ colw!($window, format!("{}\n", $fmt).as_str()); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ colw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($window:expr, $fmt:expr) => ({
+        colw!($window, format!("{}\n", $fmt).as_str());
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        colw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! logw {
-    ($window:expr, $fmt:expr) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;36m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt))); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;36m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()))); });
+    ($window:expr, $fmt:expr) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;36m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt)));
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;36m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())));
+    });
 }
 
 #[macro_export]
 macro_rules! logwln {
-    ($window:expr, $fmt:expr) => ({ logw!($window, format!("{}\n", $fmt).as_str()); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ logw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($window:expr, $fmt:expr) => ({
+        logw!($window, format!("{}\n", $fmt).as_str());
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        logw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! errw {
-    ($window:expr, $fmt:expr) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;31m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt))); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;31m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()))); });
+    ($window:expr, $fmt:expr) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;31m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt)));
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;31m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())));
+    });
 }
 
 #[macro_export]
 macro_rules! errwln {
-    ($window:expr, $fmt:expr) => ({ errw!($window, format!("{}\n", $fmt).as_str()); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ errw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($window:expr, $fmt:expr) => ({
+        errw!($window, format!("{}\n", $fmt).as_str());
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        errw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! successw {
-    ($window:expr, $fmt:expr) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;32m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt))); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;32m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()))); });
+    ($window:expr, $fmt:expr) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;32m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt)));
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;32m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())));
+    });
 }
 
 #[macro_export]
 macro_rules! successwln {
-    ($window:expr, $fmt:expr) => ({ successw!($window, format!("{}\n", $fmt).as_str()); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ successw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($window:expr, $fmt:expr) => ({
+        successw!($window, format!("{}\n", $fmt).as_str());
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        successw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }
 
 #[macro_export]
 macro_rules! warnw {
-    ($window:expr, $fmt:expr) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;33m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt))); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;33m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()))); });
+    ($window:expr, $fmt:expr) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;33m=>\x1b[1;39m {}", $crate::stdout::color_str_escape($fmt)));
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        $crate::stdout::escaped_to_printw($window, format!(" \x1b[1;33m=>\x1b[1;39m {}", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str())));
+    });
 }
 
 #[macro_export]
 macro_rules! warnwln {
-    ($window:expr, $fmt:expr) => ({ warnw!($window, format!("{}\n", $fmt).as_str()); });
-    ($window:expr, $fmt:expr, $($arg:tt)*) => ({ warnw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str()); });
+    ($window:expr, $fmt:expr) => ({
+        warnw!($window, format!("{}\n", $fmt).as_str());
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        warnw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
 }

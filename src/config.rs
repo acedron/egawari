@@ -154,44 +154,97 @@ pub fn config_interactive() -> Result<()> {
     window.keypad(true);
     pancurses::noecho();
 
+    // Available keys and y locations on window (from top).
+    let mut keys: Vec<(&str, i32)> = vec![
+        ("input.auto_setup", 3),
+        ("input.name", 4)
+    ];
+    let mut cur = 0;
+
     let mut edit = false;
     let conf = get_config()?;
-    loop {
-        window.mv(0, 0);
-        colwln!(&window, "---===egawari=Configuration===---");
-        window.printw("\n");
 
-        // Input section
-        colwln!(&window, r"=\[Input\]=");
-        logwln!(&window, "Name = {:?}", conf.input.name);
-        window.printw("\n");
+    colwln!(&window, "---===egawari=Configuration===---");
+    window.printw("\n");
 
-        // Display section
-        if let Some(_disp) = &conf.display {
-            colwln!(&window, r"=\[Display\]=");
-            window.printw("\n");
+    // Input section
+    colwln!(&window, r"=\[Input\]=");
+    logwln!(&window, "{{Automatic Setup}}");
+    logwln!(&window, "Name = \x1b[0;39m{:?}", conf.input.name);
+    window.printw("\n");
+
+    // Display section
+    if let Some(display) = &conf.display {
+        colwln!(&window, r"=\[Display\]=");
+        keys.push(("display.auto_setup", 7));
+        logwln!(&window, "{{Automatic Setup}}");
+
+        if let Some(dp) = &display.display {
+            keys.push(("display.display", 8));
+            logwln!(&window, "Display = \x1b[0;39m{:?}", dp);
         }
 
-        colwln!(&window, "---===========================---");
+        keys.push(("display.screen", 9));
+        logwln!(&window, "Screen = \x1b[0;39m{:?}", display.screen);
         window.printw("\n");
-        logwln!(&window, r#"Use "Up" and "Down" to move, "Space" to edit and "Enter" to exit."#);
+    }
+
+    colwln!(&window, "---===========================---");
+    window.printw("\n");
+    logwln!(&window, r#"Use "Up" and "Down" to move, "Space" to edit and "Enter" to exit."#);
+
+    loop {
+        window.attron(pancurses::A_BOLD);
+        window.attron(pancurses::ColorPair(6));
+        for key in &keys {
+            window.mvaddstr(key.1, 0, " => ");
+        }
+
+        window.attroff(pancurses::A_BOLD);
+        window.attron(pancurses::ColorPair(5));
+        window.mvaddstr(keys[cur].1, 0, " >> ");
+        window.attron(pancurses::A_BOLD);
+        window.mv(0, 0);
+        window.refresh();
+
+        // TODO: Implement edit mode.
 
         match window.getch() {
             Some(pancurses::Input::KeyEnter) | Some(pancurses::Input::Character('\n')) => {
-                if !edit { break; }
-                else { edit = false; }
+                if !edit {
+                    break;
+                } else {
+                    edit = false;
+                }
             },
             Some(pancurses::Input::Character(' ')) => {
-                /* if !edit { edit = true; } */
+                if !edit {
+                    if keys[cur].0.split(".").collect::<Vec<&str>>()[1] == "auto_setup" {
+                        // TODO: Initialize auto setup.
+                    } else {
+                        edit = true;
+                    }
+                }
             },
             Some(pancurses::Input::KeyUp) => {
-                // TODO: Select the previous key.
+                if !edit {
+                    if cur == 0 {
+                        cur = keys.len() - 1;
+                    } else {
+                        cur -= 1;
+                    }
+                }
             },
             Some(pancurses::Input::KeyDown) => {
-                // TODO: Select the next key.
+                if !edit {
+                    if cur == keys.len() - 1 {
+                        cur = 0;
+                    } else {
+                        cur += 1;
+                    }
+                }
             },
-            Some(_) => (),
-            None => ()
+            _ => ()
         }
 
         window.refresh();
