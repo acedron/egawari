@@ -26,6 +26,7 @@ use crate::stdout::init_curses_wcolors;
 
 /// The configuration struct.
 ///
+/// 
 /// ## Example
 /// 
 /// ```rust
@@ -130,15 +131,89 @@ pub fn get_config() -> Result<Config> {
 /// 
 /// config::save_config(conf).unwrap();
 /// ```
-pub fn save_config(config: Config) -> Result<()> {
+pub fn save_config(config: &Config) -> Result<()> {
     let dir = config_dir().unwrap().join("egawari");
     let file = dir.join("egawari.toml");
-    let raw = toml::to_string_pretty(&config).context("Couldn't convert the config to TOML.")?;
+    let raw = toml::to_string_pretty(config).context("Couldn't convert the config to TOML.")?;
     
     fs::create_dir_all(dir.as_path()).context("Couldn't create the config directory.")?;
     fs::write(file.as_path(), raw).context("Couldn't write to the config file.")?;
 
     Ok(())
+}
+
+/// The behaviour of the config key.
+#[derive(PartialEq, Eq)]
+enum ConfigKeyType {
+    Button,
+    String,
+    Number
+}
+
+/// The pointer types of the config keys.
+#[derive(Debug)]
+enum ConfigKeyPointer {
+    String(*mut String),
+    Number(*mut u8)
+}
+
+/// Information about the config key.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// let conf: &mut Config = &mut get_config()?;
+/// ConfigKey {
+///     key_type: ConfigKeyType::String,
+///     ptr: Some(ConfigKeyPointer::String(&mut conf.input.name)),
+///     name: "Input Name",
+///     ypos: -1
+/// }
+/// ```
+struct ConfigKey<'a> {
+    key_type: ConfigKeyType,
+    ptr: Option<ConfigKeyPointer>,
+    name: &'a str,
+    ypos: i32
+}
+
+/// Config section.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// let conf: &mut Config = &mut get_config()?;
+/// 
+/// ConfigKeySection {
+///     name: "Input",
+///     keys: vec![
+///         ConfigKey {
+///             key_type: ConfigKeyType::String,
+///             ptr: Some(ConfigKeyPointer::String(&mut conf.input.name)),
+///             name: "Input Name",
+///             ypos: -1
+///         }
+///     ]
+/// }
+/// ```
+struct ConfigKeySection<'a> {
+    name: &'a str,
+    keys: Vec<ConfigKey<'a>>
+}
+
+/// The location of the config key.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// ConfigKeyLocation {
+///     section: 0,
+///     key: 0
+/// }
+/// ```
+struct ConfigKeyLocation {
+    section: usize,
+    key: usize
 }
 
 /// Edit the config keys and values interactively using curses.
@@ -150,45 +225,96 @@ pub fn save_config(config: Config) -> Result<()> {
 /// config::config_interactive();
 /// ```
 pub fn config_interactive() -> Result<()> {
+    let conf: &mut Config = &mut get_config()?;
+    let mut key_sections: Vec<ConfigKeySection> = vec![
+        ConfigKeySection {
+            name: "Input",
+            keys: vec![
+                ConfigKey {
+                    key_type: ConfigKeyType::Button,
+                    ptr: None,
+                    name: "Automatic Setup",
+                    ypos: -1
+                },
+                ConfigKey {
+                    key_type: ConfigKeyType::String,
+                    ptr: Some(ConfigKeyPointer::String(&mut conf.input.name)),
+                    name: "Name",
+                    ypos: -1
+                }
+            ]
+        }
+    ];
+
+    if let Some(display) = &mut conf.display {
+        let mut arr: Vec<ConfigKey> = vec![
+            ConfigKey {
+                key_type: ConfigKeyType::Button,
+                ptr: None,
+                name: "Automatic Setup",
+                ypos: -1
+            }
+        ];
+
+        if let Some(dp) = &mut display.display {
+            arr.push(ConfigKey {
+                key_type: ConfigKeyType::String,
+                ptr: Some(ConfigKeyPointer::String(dp)),
+                name: "Display",
+                ypos: -1
+            });
+        }
+
+        arr.push(ConfigKey {
+            key_type: ConfigKeyType::Number,
+            ptr: Some(ConfigKeyPointer::Number(&mut display.screen)),
+            name: "Screen",
+            ypos: -1
+        });
+
+        key_sections.push(ConfigKeySection {
+            name: "Display",
+            keys: arr
+        });
+    }
+
     let window = init_curses_wcolors();
     window.keypad(true);
     pancurses::noecho();
-
-    // Available keys and y locations on window (from top).
-    let mut keys: Vec<(&str, i32)> = vec![
-        ("input.auto_setup", 3),
-        ("input.name", 4)
-    ];
-    let mut cur = 0;
-
-    let mut edit = false;
-    let conf = get_config()?;
-
     colwln!(&window, "---===egawari=Configuration===---");
-    window.printw("\n");
 
-    // Input section
-    colwln!(&window, r"=\[Input\]=");
-    logwln!(&window, "{{Automatic Setup}}");
-    logwln!(&window, "Name = \x1b[0;39m{:?}", conf.input.name);
-    window.printw("\n");
+    let mut cur = ConfigKeyLocation {
+        section: 0,
+        key: 0
+    };
+    let mut edit = false;
 
-    // Display section
-    if let Some(display) = &conf.display {
-        colwln!(&window, r"=\[Display\]=");
-        keys.push(("display.auto_setup", 7));
-        logwln!(&window, "{{Automatic Setup}}");
-
-        if let Some(dp) = &display.display {
-            keys.push(("display.display", 8));
-            logwln!(&window, "Display = \x1b[0;39m{:?}", dp);
-        }
-
-        keys.push(("display.screen", 9));
-        logwln!(&window, "Screen = \x1b[0;39m{:?}", display.screen);
+    let mut line_buf = 1;
+    for section in &mut key_sections {
         window.printw("\n");
+        colwln!(&window, r"=\[{}\]=", section.name);
+        line_buf += 2;
+
+        for mut key in &mut section.keys {
+            if key.key_type == ConfigKeyType::Button {
+                colwln!(&window, " => \x1b[0;39m{{{{{}}}}}", key.name);
+            } else {
+                match key.ptr.as_ref().unwrap() {
+                    ConfigKeyPointer::String(val) => unsafe {
+                        colwln!(&window, " => {} = \x1b[0;39m{:?}", key.name, **val);
+                    },
+                    ConfigKeyPointer::Number(val) => unsafe {
+                        colwln!(&window, " => {} = \x1b[0;39m{:?}", key.name, **val);
+                    }
+                }
+            }
+
+            key.ypos = line_buf;
+            line_buf += 1;
+        }
     }
 
+    window.printw("\n");
     colwln!(&window, "---===========================---");
     window.printw("\n");
     logwln!(&window, r#"Use "Up" and "Down" to move, "Space" to edit and "Enter" to exit."#);
@@ -196,18 +322,23 @@ pub fn config_interactive() -> Result<()> {
     loop {
         window.attron(pancurses::A_BOLD);
         window.attron(pancurses::ColorPair(6));
-        for key in &keys {
-            window.mvaddstr(key.1, 0, " => ");
+        for section in &key_sections {
+            for key in &section.keys {
+                window.mvaddstr(key.ypos, 0, " => ");
+            }
         }
+
+        let cur_key = &key_sections[cur.section].keys[cur.key];
 
         window.attroff(pancurses::A_BOLD);
         window.attron(pancurses::ColorPair(5));
-        window.mvaddstr(keys[cur].1, 0, " >> ");
+        window.mvaddstr(cur_key.ypos, 0, " >> ");
         window.attron(pancurses::A_BOLD);
         window.mv(0, 0);
         window.refresh();
 
         // TODO: Implement edit mode.
+        //let mut buf = String::new();
 
         match window.getch() {
             Some(pancurses::Input::KeyEnter) | Some(pancurses::Input::Character('\n')) => {
@@ -219,28 +350,43 @@ pub fn config_interactive() -> Result<()> {
             },
             Some(pancurses::Input::Character(' ')) => {
                 if !edit {
-                    if keys[cur].0.split(".").collect::<Vec<&str>>()[1] == "auto_setup" {
+                    if cur_key.key_type == ConfigKeyType::Button {
                         // TODO: Initialize auto setup.
                     } else {
                         edit = true;
+                        //buf = String::new();
                     }
+                } else {
+                    //buf.push(' ');
                 }
             },
             Some(pancurses::Input::KeyUp) => {
                 if !edit {
-                    if cur == 0 {
-                        cur = keys.len() - 1;
+                    if cur.key == 0 {
+                        if cur.section == 0 {
+                            cur.section = key_sections.len() - 1;
+                        } else {
+                            cur.section -= 1;
+                        }
+
+                        cur.key = key_sections[cur.section].keys.len() - 1;
                     } else {
-                        cur -= 1;
+                        cur.key -= 1;
                     }
                 }
             },
             Some(pancurses::Input::KeyDown) => {
                 if !edit {
-                    if cur == keys.len() - 1 {
-                        cur = 0;
+                    if cur.key == key_sections[cur.section].keys.len() - 1 {
+                        if cur.section == key_sections.len() - 1 {
+                            cur.section = 0;
+                        } else {
+                            cur.section += 1;
+                        }
+
+                        cur.key = 0;
                     } else {
-                        cur += 1;
+                        cur.key += 1;
                     }
                 }
             },
@@ -249,7 +395,7 @@ pub fn config_interactive() -> Result<()> {
 
         window.refresh();
     }
-    
+
     pancurses::endwin();
     save_config(conf)?;
     successln!("Successfully saved the configuration.");
