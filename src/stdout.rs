@@ -15,6 +15,7 @@
 ** You should have received a copy of the GNU General Public License
 ** along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ****************************************************************************/
+use std::str::Chars;
 use fancy_regex::{Regex, Captures};
 use pancurses;
 
@@ -105,6 +106,49 @@ pub fn init_curses_wcolors() -> pancurses::Window {
     window
 }
 
+/// Parses the escaped string, enables the colors and returns the remaining characters.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// extern crate pancurses;
+/// 
+/// let escaped = stdout::color_str_escape(" => Hello, world!");
+/// let window = pancurses::initscr();
+/// for s in escaped.split("\x1b") {
+///     let parsed = stdout::parse_escaped(&window, s).unwrap();
+///     window.printw(parsed.as_str());
+/// }
+/// ```
+pub fn parse_escaped<'a>(window: &pancurses::Window, s: &'a str) -> Option<Chars<'a>> {
+    let re = Regex::new(r"(?<=\[)\d*;\d+(?=m)").unwrap();
+    let mat = re.find(s).unwrap();
+    let mut chars = s.chars();
+
+    if let Some(mat) = mat {
+        if mat.start() > 1 {
+            return None;
+        }
+
+        let colors: Vec<&str> = mat.as_str().split(";").collect();
+        match colors[0] {
+            "1" => { window.attron(pancurses::A_BOLD); },
+            _ => { window.attroff(pancurses::A_BOLD); }
+        }
+
+        let mut color_chars = colors[1].chars();
+        color_chars.next();
+        let color = color_chars.as_str();
+        if color != "" {
+            window.attron(pancurses::ColorPair(color.parse::<u8>().unwrap()));
+        }
+            
+        chars.nth(mat.end());
+    }
+
+    Some(chars)
+}
+
 /// Converts the ANSI escape colored string to a sequence of
 /// curses attributes and `printw` methods and runs them.
 /// 
@@ -114,43 +158,50 @@ pub fn init_curses_wcolors() -> pancurses::Window {
 /// extern crate pancurses;
 /// 
 /// let window = pancurses::initscr();
-/// stdout::escaped_to_printw(&window, "\x1b[1;32mHi!")
+/// stdout::escaped_to_printw(&window, "\x1b[1;32mHi!");
 /// ```
 pub fn escaped_to_printw(window: &pancurses::Window, escaped: String) {
     window.attron(pancurses::ColorPair(9));
     window.attron(pancurses::A_BOLD);
 
-    let re = Regex::new(r"(?<=\[)\d*;\d+(?=m)").unwrap();
     for s in escaped.split("\x1b") {
-        let mat = re.find(s).unwrap();
-        let mut chars = s.chars();
+        let parsed = parse_escaped(window, s);
 
-        if let Some(mat) = mat {
-            if mat.start() > 1 {
-                continue;
-            }
-
-            let colors: Vec<&str> = mat.as_str().split(";").collect();
-            match colors[0] {
-                "1" => { window.attron(pancurses::A_BOLD); },
-                _ => { window.attroff(pancurses::A_BOLD); }
-            }
-
-            let mut color_chars = colors[1].chars();
-            color_chars.next();
-            let color = color_chars.as_str();
-            if color != "" {
-                window.attron(pancurses::ColorPair(color.parse::<u8>().unwrap()));
-            }
-            
-            chars.nth(mat.end());
+        if let Some(chars) = parsed {
+            window.printw(chars.as_str());
+        } else {
+            continue;
         }
-
-        window.printw(chars.as_str());
     }
 
     window.attron(pancurses::ColorPair(9));
     window.attroff(pancurses::A_BOLD);
+}
+
+/// Converts the ANSI escape colored string to a sequence of
+/// curses attributes and `addstr` methods and runs them.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// extern crate pancurses;
+/// 
+/// let window = pancurses::initscr();
+/// stdout::escaped_to_addstr(&window, "\x1b[1;32mHi!");
+/// ```
+pub fn escaped_to_addstr(window: &pancurses::Window, escaped: String) {
+    window.attron(pancurses::ColorPair(9));
+    window.attron(pancurses::A_BOLD);
+
+    for s in escaped.split("\x1b") {
+        let parsed = parse_escaped(window, s);
+
+        if let Some(chars) = parsed {
+            window.addstr(chars.as_str());
+        } else {
+            continue;
+        }
+    }
 }
 
 //
@@ -382,5 +433,50 @@ macro_rules! warnwln {
 
     ($window:expr, $fmt:expr, $($arg:tt)*) => ({
         warnw!($window, format!("{}\n", format!($fmt, $($arg)*).as_str()).as_str());
+    });
+}
+
+//
+// Format with colors without printing them.
+//
+
+#[macro_export]
+macro_rules! colfmt {
+    ($fmt:expr) => ({
+        format!("\x1b[1;39m{}\x1b[;m", $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($fmt:expr, $($arg:tt)*) => ({
+        format!("\x1b[1;39m{}\x1b[;m", $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
+}
+
+//
+// Macro rules that automatically add string to a curses window after
+// coloring the string using ColorPair attribute sequences using
+// `color_str_escape` and `escaped_to_addstr` function above.
+//
+
+#[macro_export]
+macro_rules! colwaddstr {
+    ($window:expr, $fmt:expr) => ({
+        $crate::stdout::escaped_to_addstr($window, $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($window:expr, $fmt:expr, $($arg:tt)*) => ({
+        $crate::stdout::escaped_to_addstr($window, $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
+    });
+}
+
+#[macro_export]
+macro_rules! colwmvaddstr {
+    ($window:expr, $y:expr, $x:expr, $fmt:expr) => ({
+        $window.mv($y, $x);
+        $crate::stdout::escaped_to_addstr($window, $crate::stdout::color_str_escape($fmt));
+    });
+
+    ($window:expr, $y:expr, $x:expr, $fmt:expr, $($arg:tt)*) => ({
+        $window.mv($y, $x);
+        $crate::stdout::escaped_to_addstr($window, $crate::stdout::color_str_escape(format!($fmt, $($arg)*).as_str()));
     });
 }
