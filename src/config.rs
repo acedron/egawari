@@ -177,6 +177,12 @@ struct ConfigKey<'a> {
     ypos: i32
 }
 
+impl ConfigKey<'_> {
+    fn val_xpos(&self) -> i32 {
+        format!(" => {} = ", self.name).len() as i32
+    }
+}
+
 /// Config section.
 /// 
 /// ## Example
@@ -319,32 +325,54 @@ pub fn config_interactive() -> Result<()> {
     window.printw("\n");
     logwln!(&window, r#"Use "Up" and "Down" to move, "Space" to edit and "Enter" to exit."#);
 
+    let mut buf = String::new();
     loop {
-        window.attron(pancurses::A_BOLD);
-        window.attron(pancurses::ColorPair(6));
-        for section in &key_sections {
-            for key in &section.keys {
-                window.mvaddstr(key.ypos, 0, " => ");
-            }
+        let cur_key = &key_sections[cur.section].keys[cur.key];
+        let mut cur_val_str = String::new();
+        if cur_key.key_type != ConfigKeyType::Button {
+            cur_val_str = match cur_key.ptr.as_ref().unwrap() {
+                ConfigKeyPointer::String(val) => unsafe {
+                    format!("{}", &**val)
+                },
+                ConfigKeyPointer::Number(val) => unsafe {
+                    format!("{}", **val)
+                }
+            };
         }
 
-        let cur_key = &key_sections[cur.section].keys[cur.key];
+        if !edit {
+            for section in &key_sections {
+                for key in &section.keys {
+                    colwmvaddstr!(&window, key.ypos, 0, " => ");
+                }
+            }
 
-        window.attroff(pancurses::A_BOLD);
-        window.attron(pancurses::ColorPair(5));
-        window.mvaddstr(cur_key.ypos, 0, " >> ");
-        window.attron(pancurses::A_BOLD);
-        window.mv(0, 0);
-        window.refresh();
+            window.attroff(pancurses::A_BOLD);
+            window.attron(pancurses::ColorPair(5));
+            window.mvaddstr(cur_key.ypos, 0, " >> ");
+            window.attron(pancurses::A_BOLD);
 
-        // TODO: Implement edit mode.
-        //let mut buf = String::new();
+            window.mv(0, 0);
+            window.refresh();
+        }
 
         match window.getch() {
+            Some(pancurses::Input::Character('\u{1b}')) => {
+                edit = false;
+            },
             Some(pancurses::Input::KeyEnter) | Some(pancurses::Input::Character('\n')) => {
                 if !edit {
                     break;
                 } else {
+                    match cur_key.ptr.as_ref().unwrap() {
+                        ConfigKeyPointer::String(ptr) => unsafe {
+                            **ptr = buf.clone();
+                        },
+                        ConfigKeyPointer::Number(ptr) => unsafe {
+                            let digits: String = buf.clone().chars().filter(|c| c.is_digit(10)).collect();
+                            **ptr = digits.parse::<u8>().unwrap();
+                        }
+                    }
                     edit = false;
                 }
             },
@@ -354,10 +382,10 @@ pub fn config_interactive() -> Result<()> {
                         // TODO: Initialize auto setup.
                     } else {
                         edit = true;
-                        //buf = String::new();
+                        buf = cur_val_str.clone();
                     }
                 } else {
-                    //buf.push(' ');
+                    buf.push(' ');
                 }
             },
             Some(pancurses::Input::KeyUp) => {
@@ -390,10 +418,28 @@ pub fn config_interactive() -> Result<()> {
                     }
                 }
             },
+            Some(pancurses::Input::KeyBackspace) | Some(pancurses::Input::Character('\u{7f}')) => {
+                buf.pop();
+            },
+            Some(pancurses::Input::Character(c)) => {
+                buf.push(c);
+            }
             _ => ()
         }
 
-        window.refresh();
+        if edit {
+            window.mv(cur_key.ypos, cur_key.val_xpos());
+            window.clrtoeol();
+            match cur_key.key_type {
+                ConfigKeyType::String => {
+                    colwaddstr!(&window, "\x1b[0;39m{:?}", &buf);
+                    window.mv(window.get_cur_y(), window.get_cur_x() - 1);
+                },
+                _ => {
+                    colwaddstr!(&window, "\x1b[0;39m{}", &buf);
+                }
+            }
+        }
     }
 
     pancurses::endwin();
