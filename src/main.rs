@@ -33,6 +33,20 @@ pub mod config;
 #[cfg(test)]
 mod tests;
 
+fn help() {
+    colln!("---===egawari===---");
+    logln!("Makes your touchpad work like a graphics tablet.");
+    println!();
+    colln!("---====Usage====---");
+    logln!("egawari [options] <command> [arguments]");
+    println!();
+    colln!("---===Commands==---");
+    logln!("help => Shows this text.");
+    logln!("config => Edits or shows the egawari configuration interactively.");
+    println!();
+    colln!("---=============---");
+}
+
 fn main() -> Result<()> {
     let mut args: Vec<String> = vec![];
     let mut opts: Vec<String> = vec![];
@@ -64,22 +78,8 @@ fn main() -> Result<()> {
     args.remove(0);
 
     match command.as_str() {
-        "help" => {
-            colln!("---===egawari===---");
-            logln!("Makes your touchpad work like a graphics tablet.");
-            println!();
-            colln!("---====Usage====---");
-            logln!("egawari [options] <command> [arguments]");
-            println!();
-            colln!("---===Commands==---");
-            logln!("help => Shows this text.");
-            logln!("config => Edits or shows the egawari configuration interactively.");
-            println!();
-            colln!("---=============---");
-        },
-        "config" => {
-            config::config_interactive()?;
-        },
+        "help" => help(),
+        "config" => config::config_interactive()?,
         _ => {
             errln!("Unknown command: \x1b[0;39m{}", command);
             logln!("See: \x1b[0;39megawari help");

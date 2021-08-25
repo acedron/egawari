@@ -25,7 +25,6 @@ use toml;
 use crate::stdout::init_curses_wcolors;
 
 /// The configuration struct.
-///
 /// 
 /// ## Example
 /// 
